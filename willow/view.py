@@ -7,6 +7,7 @@ pkg_resources.require('pygr-draw>=0.5')
 
 import quixote
 from quixote.directory import Directory
+from quixote.util import StaticDirectory
 
 import pygr_draw
 
@@ -16,6 +17,7 @@ except ImportError:
     import simplejson as json
     
 ###
+USE_PYTHONLIST=True;
 
 from . import bookmarks, db, blast_view
 from .bookmarks import Bookmark
@@ -192,7 +194,8 @@ class BasicView(Directory):
         return IntervalView(self.genome_name, interval, nlmsa_list, wrappers, extra_info)
 
 class IntervalView(Directory):
-    _q_exports = ['', 'png', 'json', 'quantify', 'overlaps']
+    _q_exports = ['', 'png', 'json', 'quantify', 'overlaps', 'js']
+    js=StaticDirectory("/u/mille449/willow/willow/templates/js", list_directory=1)
 
     def __init__(self, genome_name, interval, nlmsa_list, wrappers, extra_info):
         self.genome_name = genome_name
@@ -233,11 +236,12 @@ class IntervalView(Directory):
                 features = []
             l.append((i, len(features)))
             print i, len(features)
-
+            
+            
         qp = quote_plus
         template = env.get_template('InternalView/index.html')
         return template.render(locals())
-
+        
     def png(self):
         """
         Draw & return a png for the given interval / NLMSAs.
@@ -258,13 +262,34 @@ class IntervalView(Directory):
         """
         Return coordinates for blobs in JSON format.
         """
-        picture_class = pygr_draw.PythonList
+        request = quixote.get_request().request.get_fields()
+        
+        
+                # get the data for the canvas drawing 
+        # jsonObj=""
+        # if(USE_PYTHONLIST):
+            # from pygr_draw.PythonList import PythonList
+            # picture_class = PythonList
+            # pic = pygr_draw.draw_annotation_maps(self.interval,
+                                                # self.nlmsa_list,
+                                                # picture_class=picture_class,
+                                                # wrappers=self.wrappers)
+            # jsonObj = pic.finalize()
+            
+            
+            
+            
+        from pygr_draw.JSONSequencePicture import JSONSequencePicture
+        picture_class = JSONSequencePicture
         pic = pygr_draw.draw_annotation_maps(self.interval,
-                                             self.nlmsa_list,
-                                             picture_class=picture_class,
-                                             wrappers=self.wrappers)
-        l = pic.finalize()
-        return json.dumps(l)
+                                            self.nlmsa_list,
+                                            picture_class=picture_class,
+                                            wrappers=self.wrappers)
+        jsonObj = pic.finalize()
+        
+        return jsonObj + open('/u/mille449/willow/willow/templates/canvas.js', 'r').read()
+
+        
 
     def overlaps(self):
         request = quixote.get_request()

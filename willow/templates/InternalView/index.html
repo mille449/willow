@@ -1,6 +1,11 @@
 {% extends "base.html" %}
 {% import 'forms.html' as forms %}
 
+{% block javascript %}
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+<script type="text/javascript" src="js/json-canvas-draw.js"></script>
+{% endblock %}
+
 {% block title %}Viewing interval: {{ ival.id }}:{{ ival.start }}-{{ ival.stop }}{% endblock %}
 
 {% block sidebar %}
@@ -22,21 +27,22 @@
 {% endblock %}
 
 {% block content %}
+<span id="" >
 <p>        
 <h2>Interval: {{ ival.id }} from {{ ival.start }} to {{ ival.stop }}</h2>
 
 <li>{{ ival.stop - ival.start }} bases of {{ parent_len }}</li>
 
 <li>
-<a href='../go?sequence={{ ival.id|e }}&start={{ move_left_start }}&stop={{ move_left_stop }}'>&lt;- move left</a> or
+<a id="moveLeft" href='../go?sequence={{ ival.id|e }}&start={{ move_left_start }}&stop={{ move_left_stop }}'>&lt;- move left</a> or
 
-<a href='../go?sequence={{ ival.id|e }}&start={{ zoom_in_start }}&stop={{ zoom_in_stop }}'>+ zoom in +</a>
+<a id="zoomIn" href='../go?sequence={{ ival.id|e }}&start={{ zoom_in_start }}&stop={{ zoom_in_stop }}'>+ zoom in +</a>
 or
-<a href='../go?sequence={{ ival.id|e }}&start={{ zoom_out_start }}&stop={{ zoom_out_stop }}'>- zoom out -</a>
+<a id="zoomOut" href='../go?sequence={{ ival.id|e }}&start={{ zoom_out_start }}&stop={{ zoom_out_stop }}'>- zoom out -</a>
 
 or
 
-<a href='../go?sequence={{ ival.id|e }}&start={{ move_right_start }}&stop={{ move_right_stop }}'>move right -&gt;</a>
+<a id="moveRight" href='../go?sequence={{ ival.id|e }}&start={{ move_right_start }}&stop={{ move_right_stop }}'>move right -&gt;</a>
 
 </li>
 
@@ -63,6 +69,12 @@ or
 </ul>
 -->
 <hr>
-<a href='./png'><image src='./png' width='100%'></a>
-
+</span>
+<!--<a href='./png'><image src='./png' width='100%'></a>-->
+<div id="json"></div>
+<canvas id="canvas" width="1000" height="500" >
+    Your browser does not support the canvas element.<br/>
+    Please use an updated version of Firefox, Opera, or Safari.
+</canvas>
+<script type="text/javascript" src="json?asdf=234234"></script>
 {% endblock %}
