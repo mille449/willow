@@ -42,7 +42,7 @@ colors.orange = "#ff8040";
 colors.purple = "#800080";
 colors.black = "#000000";
 
-function JSONSequencePicture( sequence_length, size ){
+function JSONSequencePicture( sequence_length, sequence_start, size ){
     if (size == null) size = [1000,5000];
     this.SUFFIX = '.js';
     this.colors = colors;
@@ -55,6 +55,7 @@ function JSONSequencePicture( sequence_length, size ){
     this.SEQUENCE_BASE = 50;                 // horizontal margin
     this.SEQUENCE_OFFSET = 50;               // vertical margin
     this.SEQUENCE_TEXT_OFFSET = 48;          // vertical margin for text
+    this.TICKSPACING = 
 
     this.FEATURE_HEIGHT = 8;
     this.THIN_FEATURE_HEIGHT = 2;
@@ -67,8 +68,9 @@ function JSONSequencePicture( sequence_length, size ){
     this.size = size;
     // resolution controls the granularity used to calculate overlaps.
     this.resolution = size[0] / 2;        // good default?
-    // sequence_length is used only to calculate the tick spacing
+    // sequence_length and sequence_start are used only to calculate the tick spacing
     this.sequence_length = sequence_length;
+    this.sequence_start = sequence_start;
 
 
     this.left_margin_offset = 0;
@@ -112,24 +114,24 @@ function JSONSequencePicture( sequence_length, size ){
                             "fill":colors.black});
 
         this._calc_tick_spacing();
-        var n_ticks = this.sequence_length / this.TICKSPACING;
+        // we are counting the offset twice (for both right and left side)
+        // because the annotation position calculation also does so
+        var n_ticks = (w - this.left_margin_offset) / this.TICKSPACING;
         //ticklocations = [ i * this.TICKSPACING for i in range(n_ticks + 1) ]
 
-        var ticklocations = [];
-        for (i=0;  i< n_ticks + 1; i++ ){
-            ticklocations.push(i * this.TICKSPACING);
-        }
-
+        // ticks will be at powers of 10
+        // put the first tick at the first valid location from the start of the sequence
+        start_x = this.TICKSPACING - (this.sequence_start % this.TICKSPACING);
+        if (start_x == this.TICKSPACING) start_x = 0;  // draw n=0 tick instead of n=1 tick
+        start_x += this.left_margin_offset;
         start_y = this.SEQUENCE_OFFSET;
 
-        // conversion factor
-        w = this.w - this.SEQUENCE_BASE - this.left_margin_offset;
-        var seq_to_canvas = w / this.sequence_length;
-
-        for each (var loc in ticklocations){
-            start_x = this.left_margin_offset + Math.floor(loc * seq_to_canvas);
-
-            this.rectangles.push({"rect":[start_x, start_y,
+        
+        var loc = 0;
+        for (i=0;  i< n_ticks + 1; i++ ){
+            loc = start_x + this.TICKSPACING * i
+            console.log("loc: "+loc);
+            this.rectangles.push({"rect":[loc, start_y,
                                     this.SEQUENCE_TICK_WIDTH,
                                     this.SEQUENCE_TICK_HEIGHT],
                                     "fill":colors.black});
@@ -214,11 +216,11 @@ function JSONSequencePicture( sequence_length, size ){
 
     this._calc_tick_spacing=function(){
         for (var tickunit=12; tickunit > 0;  tickunit--){//in range(12, 0, -1):
-            if (Math.floor(this.sequence_length / Math.pow(10,tickunit)) >= 2)
+            if ( this.sequence_length / Math.pow(10,tickunit) >= 3)
                 break;
         }
 
-        this.TICKSPACING = Math.pow(10,tickunit);
+        this.TICKSPACING = Math.pow(10,tickunit) / this.sequence_length * this.w;
     }
 
 
@@ -250,7 +252,7 @@ function JSONSequencePicture( sequence_length, size ){
 //            color = annotation.color
             var color = annotation[4];
 
-            //this._draw_feature_name(name, start, slot);
+            this._draw_feature_name(name, start, slot);
 
             if (is_group){
                 this._draw_thin_feature(slot, start, stop, color, name );
@@ -276,9 +278,11 @@ function Draw(){
 
     //$.ajax({url:"http://lyorn.idyll.org:8000/js/json-canvas-draw.js", dataType: 'script', method:'get'});
     //$.ajax({url:"http://lyorn.idyll.org:8000/js/preprocessed.js", dataType: 'json', method:'get', success:function(data){annots=data;}});
+    
+
     console.log("starting draw!");
 
-    var j = new JSONSequencePicture(annots.length);
+    var j = new JSONSequencePicture(annots.length, start);
     j.draw_sequence_line();
     var rectangles= j.draw_annotations(annots);
 
@@ -291,6 +295,8 @@ function Draw(){
     }
 
     var ctx = canvas.getContext('2d');
+    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     console.log("Now drawing "+rectangles["rectangles"].length+" rectangles");
     for each (var r in rectangles["rectangles"]){
@@ -313,10 +319,10 @@ function Draw(){
             );
     }
 
+    if (notexts) return;
     console.log("drawing texts");
     
     for each (var t in rectangles["texts"]){
-        console.log(t);
         ctx.fillStyle = t["fill"];
         ctx.fillText(
             t["text"][0],
@@ -371,9 +377,8 @@ function showInterval(relation){
     //      data: the new annots object
     //
     
-    console.log(obj);
     $("#canvas").hide();
-    $("#loading").show();
+    $("#loading").css("display", "inline-block");
     $.ajax({
         url:"../json",
         method: 'post',
@@ -392,6 +397,7 @@ function showInterval(relation){
             $('input[name="stop"]').val(stop);
             var title = 'Interval: '+sequence+' from '+start+' to '+stop;
             $('#interval').html(title);
+            $('#bases').html(stop-start);
             document.title = title;
 
             // we want to change the displayed url, but we have to change some
@@ -423,6 +429,7 @@ var annots={};
 var sequence;
 var start;
 var stop;
+var notexts = false;
 $(function(){
     // when the page loads, grab sequence, start and stop from their text boxes
     sequence = $('input[name="sequence"]').val();

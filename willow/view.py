@@ -71,9 +71,8 @@ def parse_interval_string(db, s):
 
 class BasicView(Directory):
     _q_exports = ['', 'add_bookmark', 'go', 'css', 'blast', 'delete_bookmark', 'json', 'js', 'images']
-    # TODO: these need to be absolute paths, us os.path
-    js=StaticDirectory("/u/mille449/willow/willow/templates/js", list_directory=1)
-    images=StaticDirectory("/u/mille449/willow/willow/templates/thin_green_line/images", list_directory=1)
+    js=StaticDirectory(os.path.abspath('willow/willow/templates/js'), list_directory=1)
+    images=StaticDirectory(os.path.abspath('willow/willow/templates/thin_green_line/images'), list_directory=1)
 
     def __init__(self, genome_name, genome_db, nlmsa_list, wrappers=None, extra_info=None):
         self.genome_name = genome_name
