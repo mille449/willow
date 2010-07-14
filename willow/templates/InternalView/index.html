@@ -29,29 +29,31 @@
 {% block content %}
 <span id="" >
 <p>        
-<h2>Interval: {{ ival.id }} from {{ ival.start }} to {{ ival.stop }}</h2>
+<h2 id="interval">Interval: {{ ival.id }} from {{ ival.start }} to {{ ival.stop }}</h2>
 
 <li>{{ ival.stop - ival.start }} bases of {{ parent_len }}</li>
 
 <li>
-<a id="moveLeft" href='../go?sequence={{ ival.id|e }}&start={{ move_left_start }}&stop={{ move_left_stop }}'>&lt;- move left</a> or
+<!--<a href='../go?sequence={{ ival.id|e }}&start={{ move_left_start }}&stop={{ move_left_stop }}'>&lt;- move left</a> or-->
+<a id="left" href="">&lt;- move left</a> or
 
-<a id="zoomIn" href='../go?sequence={{ ival.id|e }}&start={{ zoom_in_start }}&stop={{ zoom_in_stop }}'>+ zoom in +</a>
+<!--<a href='../go?sequence={{ ival.id|e }}&start={{ zoom_in_start }}&stop={{ zoom_in_stop }}'>+ zoom in +</a>-->
+<a id="zin" href="">+ zoom in +</a> or
 or
-<a id="zoomOut" href='../go?sequence={{ ival.id|e }}&start={{ zoom_out_start }}&stop={{ zoom_out_stop }}'>- zoom out -</a>
-
+<!--<a href='../go?sequence={{ ival.id|e }}&start={{ zoom_out_start }}&stop={{ zoom_out_stop }}'>- zoom out -</a>-->
+<a id="zout" href="">- zoom out -</a> or
 or
-
-<a id="moveRight" href='../go?sequence={{ ival.id|e }}&start={{ move_right_start }}&stop={{ move_right_stop }}'>move right -&gt;</a>
-
+<!--<a href='../go?sequence={{ ival.id|e }}&start={{ move_right_start }}&stop={{ move_right_stop }}'>move right -&gt;</a>-->
+<a id="right" href="">move right -&gt;</a> or
 </li>
 
 <li>
-<form method='POST' action='../go'>
-{{ forms.submit('view') }}
-{{ forms.input('sequence', value=ival.id) }} from {{ forms.input('start', value=ival.start, size=9) }} to
-{{ forms.input('stop', value=ival.stop, size=9) }}
-</form>
+<!--<form method='POST' action='../go'>-->
+{{ forms.submit('view', id="view") }}
+{{ forms.input('sequence', value=ival.id ) }} from
+{{ forms.input('start', value=ival.start, size=9 ) }} to
+{{ forms.input('stop', value=ival.stop, size=9 ) }}
+<!--</form>-->
 </li>
 
 <p>
@@ -70,11 +72,10 @@ or
 -->
 <hr>
 </span>
-<!--<a href='./png'><image src='./png' width='100%'></a>-->
 <div id="json"></div>
 <canvas id="canvas" width="1000" height="500" >
     Your browser does not support the canvas element.<br/>
     Please use an updated version of Firefox, Opera, or Safari.
 </canvas>
-<script type="text/javascript" src="json?asdf=234234"></script>
+<!--<script type="text/javascript" src="json?asdf=234234"></script>-->
 {% endblock %}

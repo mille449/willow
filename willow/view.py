@@ -70,7 +70,9 @@ def parse_interval_string(db, s):
 ###
 
 class BasicView(Directory):
-    _q_exports = ['', 'add_bookmark', 'go', 'css', 'blast', 'delete_bookmark']
+    _q_exports = ['', 'add_bookmark', 'go', 'css', 'blast', 'delete_bookmark', 'json', 'js']
+    #js=StaticDirectory("/u/mille449/willow/willow/templates/js", list_directory=1)
+    js=StaticDirectory("js", list_directory=1)
 
     def __init__(self, genome_name, genome_db, nlmsa_list, wrappers=None, extra_info=None):
         self.genome_name = genome_name
@@ -193,9 +195,90 @@ class BasicView(Directory):
         
         return IntervalView(self.genome_name, interval, nlmsa_list, wrappers, extra_info)
 
+
+    def json(self):
+        """
+        Return coordinates for blobs in JSON format.
+        """
+        #use request.form instead??
+        request = quixote.get_request().request.get_fields()
+        #request should contain:
+        #   rel:  relation - "view", "left", "right", "zin", "zout"
+        #   sequence
+        #   start
+        #   stop
+
+        try:
+            start=request['start']
+            stop=request['stop']
+            sequence=request['sequence']
+        except KeyError:
+            assert False, "Incomplete AJAX request."
+
+        # we may want to raise a 501 server error here that the ajax can catch
+        assert start!=stop, "Sequence start and stop are invalid."
+
+        #Calculate the old interval
+        interval = '/%s:%s-%s/' % (sequence, start, stop)
+        ival = parse_interval_string(self.genome_db, interval)
+        parent_len = len(ival.pathForward)
+
+        if request['rel']=='view':
+            start = max(request['start'], 0)
+            stop = min(request['stop'], parent_len)
+
+        elif request['rel']=='left':
+            start = max(ival.start - len(ival)/2, 0)
+            stop = min(start + len(ival), parent_len)
+
+        elif request['rel']=='zin':
+            start = ival.start + len(ival) / 4
+            stop = ival.stop - len(ival) / 4
+
+        elif request['rel']=='zout':
+            start = max(ival.start - len(ival)/2, 0)
+            stop = min(ival.stop + len(ival)/2, parent_len)
+
+        elif request['rel']=='right':
+            start = max(ival.start + len(ival)/2, 0)
+            stop = min(start + len(ival), parent_len)
+        
+        #Calculate the new interval
+        interval = '/%s:%s-%s/' % (request['sequence'], start, stop)
+        ival = parse_interval_string(self.genome_db, interval)
+
+
+        #get the data for the canvas drawing
+        jsonObj=""
+        if(USE_PYTHONLIST):
+            from pygr_draw.PythonList import PythonList
+            picture_class = PythonList
+            pic = pygr_draw.draw_annotation_maps(ival,
+                                                 self.nlmsa_list,
+                                                 picture_class=picture_class,
+                                                 wrappers=self.wrappers)
+            jsonObj = pic.finalize()
+
+            return jsonObj
+
+
+
+        else:
+            from pygr_draw.JSONSequencePicture import JSONSequencePicture
+            picture_class = JSONSequencePicture
+            pic = pygr_draw.draw_annotation_maps(ival,
+                                                self.nlmsa_list,
+                                                picture_class=picture_class,
+                                                wrappers=self.wrappers)
+            jsonObj = pic.finalize()
+
+            return jsonObj + open('/u/mille449/willow/willow/templates/canvas.js', 'r').read()
+
+
+
 class IntervalView(Directory):
-    _q_exports = ['', 'png', 'json', 'quantify', 'overlaps', 'js']
-    js=StaticDirectory("/u/mille449/willow/willow/templates/js", list_directory=1)
+    _q_exports = ['', 'png', 'quantify', 'overlaps']
+
 
     def __init__(self, genome_name, interval, nlmsa_list, wrappers, extra_info):
         self.genome_name = genome_name
@@ -258,38 +341,6 @@ class IntervalView(Directory):
         response.set_content_type('image/png')
         return image
 
-    def json(self):
-        """
-        Return coordinates for blobs in JSON format.
-        """
-        request = quixote.get_request().request.get_fields()
-        
-        
-                # get the data for the canvas drawing 
-        # jsonObj=""
-        # if(USE_PYTHONLIST):
-            # from pygr_draw.PythonList import PythonList
-            # picture_class = PythonList
-            # pic = pygr_draw.draw_annotation_maps(self.interval,
-                                                # self.nlmsa_list,
-                                                # picture_class=picture_class,
-                                                # wrappers=self.wrappers)
-            # jsonObj = pic.finalize()
-            
-            
-            
-            
-        from pygr_draw.JSONSequencePicture import JSONSequencePicture
-        picture_class = JSONSequencePicture
-        pic = pygr_draw.draw_annotation_maps(self.interval,
-                                            self.nlmsa_list,
-                                            picture_class=picture_class,
-                                            wrappers=self.wrappers)
-        jsonObj = pic.finalize()
-        
-        return jsonObj + open('/u/mille449/willow/willow/templates/canvas.js', 'r').read()
-
-        
 
     def overlaps(self):
         request = quixote.get_request()
