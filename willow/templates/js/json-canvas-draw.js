@@ -42,7 +42,7 @@ colors.orange = "#ff8040";
 colors.purple = "#800080";
 colors.black = "#000000";
 
-function JSONSequencePicture( sequence_length, sequence_start, size ){
+function JSONSequencePicture( sequence_length, sequence_start, sequence_stop, size ){
     if (size == null) size = [1000,5000];
     this.SUFFIX = '.js';
     this.colors = colors;
@@ -71,6 +71,7 @@ function JSONSequencePicture( sequence_length, sequence_start, size ){
     // sequence_length and sequence_start are used only to calculate the tick spacing
     this.sequence_length = sequence_length;
     this.sequence_start = sequence_start;
+    this.sequence_stop = sequence_stop;
 
 
     this.left_margin_offset = 0;
@@ -110,37 +111,40 @@ function JSONSequencePicture( sequence_length, sequence_start, size ){
         var w = this.w - this.SEQUENCE_BASE - this.left_margin_offset;
         var h = this.SEQUENCE_HEIGHT;
 
+        // using 'w' here instead of 'this.w' creates a right offset
+        // this is also done in annotation position calculation, so we leave it for now.
         this.rectangles.push({"rect":[start_x, start_y, w, h],
                             "fill":colors.black});
 
+        // so we add the offset again for the right side
+        w -= this.left_margin_offset;
+        
         this._calc_tick_spacing();
-        // we are counting the offset twice (for both right and left side)
-        // because the annotation position calculation also does so
-        var n_ticks = (w - this.left_margin_offset) / this.TICKSPACING;
-        //ticklocations = [ i * this.TICKSPACING for i in range(n_ticks + 1) ]
-
-        // ticks will be at powers of 10
+        var sequence_range = this.sequence_stop - this.sequence_start;
+        
         // put the first tick at the first valid location from the start of the sequence
         start_x = this.TICKSPACING - (this.sequence_start % this.TICKSPACING);
-        if (start_x == this.TICKSPACING) start_x = 0;  // draw n=0 tick instead of n=1 tick
+        
+        // draw n=0 tick instead of n=1 tick when at multiples of tickspacing
+        if (start_x == this.TICKSPACING) start_x = 0;  
+
+        // convert from bases to pixels 
+        tickspacing = w * this.TICKSPACING / sequence_range
+        start_x = w * start_x / sequence_range;
+
         start_x += this.left_margin_offset;
         start_y = this.SEQUENCE_OFFSET;
 
-        
-        var loc = 0;
-        for (i=0;  i< n_ticks + 1; i++ ){
-            loc = start_x + this.TICKSPACING * i
-            console.log("loc: "+loc);
-            this.rectangles.push({"rect":[loc, start_y,
+        while (start_x < this.w - this.left_margin_offset){
+            this.rectangles.push({"rect":[start_x, start_y,
                                     this.SEQUENCE_TICK_WIDTH,
                                     this.SEQUENCE_TICK_HEIGHT],
                                     "fill":colors.black});
+            start_x += tickspacing;
         }
     }
 
-//    this._draw_feature(slot, start, stop, color=None, name=''){
     this._draw_feature = function(slot, start, stop, color, name){
-
         //Draw an annotation, or part of an annotation, as a thick line.
 
         if (color == null){
@@ -177,7 +181,6 @@ function JSONSequencePicture( sequence_length, sequence_start, size ){
     }
 
     this._calc_textsize=function(text){
-
         //Calculate the width of the text label for an annotation.
 
         var text_size = text.length*7;
@@ -185,7 +188,6 @@ function JSONSequencePicture( sequence_length, sequence_start, size ){
     }
 
 
-//    this._draw_thin_feature=function(slot, start, stop, color=None){
     this._draw_thin_feature=function(slot, start, stop, color){
         //Draw an annotation as a thin line.
 
@@ -215,12 +217,16 @@ function JSONSequencePicture( sequence_length, sequence_start, size ){
 
 
     this._calc_tick_spacing=function(){
-        for (var tickunit=12; tickunit > 0;  tickunit--){//in range(12, 0, -1):
-            if ( this.sequence_length / Math.pow(10,tickunit) >= 3)
-                break;
-        }
-
-        this.TICKSPACING = Math.pow(10,tickunit) / this.sequence_length * this.w;
+        // Calculate the width (in bases, not px) for each tick
+        // TICKSPACING will always be a power of 10
+        var sequence_range = this.sequence_stop - this.sequence_start
+        
+        // we want 1-10 ticks in half of the range
+        // increase this number for more ticks
+        sequence_range /= 2;
+        
+        var tickunit = Math.floor(Math.log(sequence_range)/Math.LN10);
+        this.TICKSPACING = Math.pow(10,tickunit);
     }
 
 
@@ -282,7 +288,7 @@ function Draw(){
 
     console.log("starting draw!");
 
-    var j = new JSONSequencePicture(annots.length, start);
+    var j = new JSONSequencePicture(annots.length, start, stop);
     j.draw_sequence_line();
     var rectangles= j.draw_annotations(annots);
 
