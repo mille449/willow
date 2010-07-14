@@ -70,9 +70,10 @@ def parse_interval_string(db, s):
 ###
 
 class BasicView(Directory):
-    _q_exports = ['', 'add_bookmark', 'go', 'css', 'blast', 'delete_bookmark', 'json', 'js']
-    #js=StaticDirectory("/u/mille449/willow/willow/templates/js", list_directory=1)
-    js=StaticDirectory("js", list_directory=1)
+    _q_exports = ['', 'add_bookmark', 'go', 'css', 'blast', 'delete_bookmark', 'json', 'js', 'images']
+    # TODO: these need to be absolute paths, us os.path
+    js=StaticDirectory("/u/mille449/willow/willow/templates/js", list_directory=1)
+    images=StaticDirectory("/u/mille449/willow/willow/templates/thin_green_line/images", list_directory=1)
 
     def __init__(self, genome_name, genome_db, nlmsa_list, wrappers=None, extra_info=None):
         self.genome_name = genome_name
@@ -201,7 +202,7 @@ class BasicView(Directory):
         Return coordinates for blobs in JSON format.
         """
         #use request.form instead??
-        request = quixote.get_request().request.get_fields()
+        request = quixote.get_request().get_fields()
         #request should contain:
         #   rel:  relation - "view", "left", "right", "zin", "zout"
         #   sequence
@@ -209,8 +210,8 @@ class BasicView(Directory):
         #   stop
 
         try:
-            start=request['start']
-            stop=request['stop']
+            start=int(request['start'])
+            stop=int(request['stop'])
             sequence=request['sequence']
         except KeyError:
             assert False, "Incomplete AJAX request."
@@ -219,13 +220,13 @@ class BasicView(Directory):
         assert start!=stop, "Sequence start and stop are invalid."
 
         #Calculate the old interval
-        interval = '/%s:%s-%s/' % (sequence, start, stop)
+        interval = '%s:%d-%d' % (sequence, start, stop)
         ival = parse_interval_string(self.genome_db, interval)
         parent_len = len(ival.pathForward)
 
         if request['rel']=='view':
-            start = max(request['start'], 0)
-            stop = min(request['stop'], parent_len)
+            start = max(start, 0)
+            stop = min(stop, parent_len)
 
         elif request['rel']=='left':
             start = max(ival.start - len(ival)/2, 0)
@@ -244,9 +245,9 @@ class BasicView(Directory):
             stop = min(start + len(ival), parent_len)
         
         #Calculate the new interval
-        interval = '/%s:%s-%s/' % (request['sequence'], start, stop)
+        
+        interval = '%s:%d-%d' % (request['sequence'], start, stop)
         ival = parse_interval_string(self.genome_db, interval)
-
 
         #get the data for the canvas drawing
         jsonObj=""
@@ -258,8 +259,8 @@ class BasicView(Directory):
                                                  picture_class=picture_class,
                                                  wrappers=self.wrappers)
             jsonObj = pic.finalize()
-
-            return jsonObj
+            
+            return json.dumps({"start":start,"stop":stop,"sequence":sequence,"data":jsonObj})
 
 
 
@@ -272,7 +273,7 @@ class BasicView(Directory):
                                                 wrappers=self.wrappers)
             jsonObj = pic.finalize()
 
-            return jsonObj + open('/u/mille449/willow/willow/templates/canvas.js', 'r').read()
+            return json.dumps({"start":start,"stop":stop,"sequence":sequence,"data":jsonObj})
 
 
 

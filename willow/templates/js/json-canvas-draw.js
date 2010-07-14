@@ -274,19 +274,25 @@ function JSONSequencePicture( sequence_length, size ){
 
 function Draw(){
 
+    //$.ajax({url:"http://lyorn.idyll.org:8000/js/json-canvas-draw.js", dataType: 'script', method:'get'});
+    //$.ajax({url:"http://lyorn.idyll.org:8000/js/preprocessed.js", dataType: 'json', method:'get', success:function(data){annots=data;}});
+    console.log("starting draw!");
 
     var j = new JSONSequencePicture(annots.length);
     j.draw_sequence_line();
     var rectangles= j.draw_annotations(annots);
 
-
-
+    
 
     var canvas = document.getElementById("canvas");
-    if (!canvas.getContext) return;
+    if (!canvas.getContext) {
+        console.log("unable to get canvas context");
+        return;
+    }
 
     var ctx = canvas.getContext('2d');
 
+    console.log("Now drawing "+rectangles["rectangles"].length+" rectangles");
     for each (var r in rectangles["rectangles"]){
         ctx.fillStyle = r["fill"];
         ctx.fillRect(
@@ -296,7 +302,9 @@ function Draw(){
             r["rect"][3]
             );
 
-        ctx.strokeStyle = r["outline"];
+        
+        // this is causing canvas warnings
+        //ctx.strokeStyle = r["outline"];
         ctx.strokeRect(
             r["rect"][0],
             r["rect"][1],
@@ -305,7 +313,10 @@ function Draw(){
             );
     }
 
+    console.log("drawing texts");
+    
     for each (var t in rectangles["texts"]){
+        console.log(t);
         ctx.fillStyle = t["fill"];
         ctx.fillText(
             t["text"][0],
@@ -313,7 +324,8 @@ function Draw(){
             t["text"][2]
             );
     }
-
+    
+    console.log("Finished Drawing!");
 
 }
 
@@ -358,6 +370,10 @@ function showInterval(relation){
     //      stop:
     //      data: the new annots object
     //
+    
+    console.log(obj);
+    $("#canvas").hide();
+    $("#loading").show();
     $.ajax({
         url:"../json",
         method: 'post',
@@ -368,7 +384,7 @@ function showInterval(relation){
             start = data.start;
             stop = data.stop;
             // later this data should be appended to annots
-            annots = data.data;
+            annots = eval(data.data);
 
 
             $('input[name="sequence"]').val(sequence);
@@ -386,7 +402,15 @@ function showInterval(relation){
 
 
             // draw last so texts are updated without the lag of Draw.
+            $("#canvas").show();
+            $("#loading").hide();
             Draw();
+        },
+        error: function(xhr, textStatus, errorThrown){
+            $("#error").html(xhr.status+" "+xhr.statusText+"<br>"+
+                        xhr.responseText.replace(/\n/g, "<br>").replace(/ /g, "&nbsp;"));
+            $("#canvas").show();
+            $("#loading").hide();
         }
     });
 
@@ -395,6 +419,7 @@ function showInterval(relation){
 
 // sequence, start and stop are global variables that will track the interval
 // currently being displayed on the page
+var annots={};
 var sequence;
 var start;
 var stop;
@@ -404,7 +429,7 @@ $(function(){
     start = $('input[name="start"]').val();
     stop = $('input[name="stop"]').val();
 
-    $("#view").click(function(){showInterval("view");});
+    $('input[name="view"]').click(function(){showInterval("view");});
     $("#left").click(function(){showInterval("left");});
     $("#zin").click(function(){showInterval("zin");});
     $("#zout").click(function(){showInterval("zout");});
