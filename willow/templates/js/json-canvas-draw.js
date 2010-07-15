@@ -129,7 +129,7 @@ function JSONSequencePicture( sequence_length, sequence_start, sequence_stop, si
         if (start_x == this.TICKSPACING) start_x = 0;  
 
         // convert from bases to pixels 
-        tickspacing = w * this.TICKSPACING / sequence_range
+        var tickspacing = w * this.TICKSPACING / sequence_range
         start_x = w * start_x / sequence_range;
 
         start_x += this.left_margin_offset;
