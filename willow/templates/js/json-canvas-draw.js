@@ -1,31 +1,59 @@
 
-var indent = "";
-function var_dump(arr, showTypes){
-    var result = "";
-    var t = typeof(arr);
-    if(showTypes) result+="("+t+")";
-    result+=" ";
-    if (t=="object" || t=="function"){
-        result+="{<br>";
-        indent += "&nbsp;&nbsp;&nbsp;&nbsp;";
-        for (var n in arr){
-            result+=indent + "["+n+"]"+var_dump(arr[n]);
+//var indent = "";
+//function var_dump(arr, showTypes){
+//    var result = "";
+//    var t = typeof(arr);
+//    if(showTypes) result+="("+t+")";
+//    result+=" ";
+//    if (t=="object" || t=="function"){
+//        result+="{<br>";
+//        indent += "&nbsp;&nbsp;&nbsp;&nbsp;";
+//        for (var n in arr){
+//            result+=indent + "["+n+"]"+var_dump(arr[n]);
+//        }
+//        indent = indent.substr(24);
+//        result+=indent+"}<br>";
+//    }
+//    else if(arr!=null) result+= arr.toString() + "<br>";
+//    else result+= "null<br>";
+//
+//
+//
+//    document.getElementById('debug').innerHTML=
+//        document.getElementById('debug').innerHTML+result;
+//
+//    return result;
+//}
+
+function var_dump(obj){
+    var indent = "";
+
+    function recurse(arr){
+        var result = "";
+
+        var t = typeof(arr);
+        result+=" ";
+        if (t=="object" || t=="function" || t=="Array"){
+            result+="{\n";
+            indent += "    ";
+            for (var n in arr){
+                result+= indent + n;
+                result+=" (" + typeof(arr[n]) + ")";
+                result+=": " + recurse(arr[n]);
+            }
+            indent = indent.substr(4);
+            result+=indent+"}\n";
         }
-        indent = indent.substr(24);
-        result+=indent+"}<br>";
+
+        else if(arr==undefined) result+= "undefined\n";
+        else if(arr==null) result+= "null\n";
+        else result+= arr.toString() + "\n";
+
+        return result;
     }
-    else if(arr!=null) result+= arr.toString() + "<br>";
-    else result+= "null<br>";
 
-
-
-    document.getElementById('debug').innerHTML=
-        document.getElementById('debug').innerHTML+result;
-
-    return result;
+    console.log( "(" + typeof(obj) + "): " + recurse(obj) );
 }
-
-
 
 
 // annots is an object containing the coordinates for the rectangles and
@@ -42,109 +70,99 @@ colors.orange = "#ff8040";
 colors.purple = "#800080";
 colors.black = "#000000";
 
-function JSONSequencePicture( sequence_length, sequence_start, sequence_stop, size ){
+function SequencePicture( sequence_length, sequence_start, size ){
     if (size == null) size = [1000,5000];
-    this.SUFFIX = '.js';
-    this.colors = colors;
-
-    this.SEQUENCE_HEIGHT = 2;
-
-    this.SEQUENCE_TICK_HEIGHT = 6;
-    this.SEQUENCE_TICK_WIDTH = 2;
-
-    this.SEQUENCE_BASE = 50;                 // horizontal margin
-    this.SEQUENCE_OFFSET = 50;               // vertical margin
-    this.SEQUENCE_TEXT_OFFSET = 48;          // vertical margin for text
-    this.TICKSPACING = 
-
-    this.FEATURE_HEIGHT = 8;
-    this.THIN_FEATURE_HEIGHT = 2;
-    this.THIN_FEATURE_OFFSET = 3;
-    this.FEATURE_SPACING = 12;
-
-
-
     //  __init__
     this.size = size;
     // resolution controls the granularity used to calculate overlaps.
     this.resolution = size[0] / 2;        // good default?
-    // sequence_length and sequence_start are used only to calculate the tick spacing
+    
+    // TODO: get this information from the interval on the web page
     this.sequence_length = sequence_length;
     this.sequence_start = sequence_start;
-    this.sequence_stop = sequence_stop;
+
+    // for final y-cropping.
+    this.max_y = 2*this.VERTICAL_MARGIN + this.SEQUENCE_HEIGHT;
+
+    this.colors = colors;   
 
 
     this.left_margin_offset = 0;
-
-    // for final y-cropping.
-    this.max_y = 2*this.SEQUENCE_OFFSET + this.SEQUENCE_HEIGHT;
-
-
+    this.set_left_margin_offset(0);
 
     this.rectangles = [];
     this.texts = [];
+}
+
+// define methods as part of the prototype to prevent reassignment every time
+// an object is created.  Objects all share the same function in memory, not 
+// seperate ones for each object.
+SequencePicture.prototype = {
+
+    SEQUENCE_HEIGHT: 2,
+
+    SEQUENCE_TICK_HEIGHT: 6,
+    SEQUENCE_TICK_WIDTH: 2,
+
+    HORIZONTAL_MARGIN: 50,             
+    VERTICAL_MARGIN: 50,               
+    VERTICAL_MARGIN_TEXT: 48,          
+    TICKSPACING: 10,            // default as a placeholder.
+
+    FEATURE_HEIGHT: 8,
+    THIN_FEATURE_HEIGHT: 2,
+    THIN_FEATURE_OFFSET: 3,
+    FEATURE_SPACING: 12,
 
 
 
-
-    this.set_left_margin_offset=function(x){
-        x+=0 // convert to number... should be int
-        this.left_margin_offset = x + this.SEQUENCE_BASE;
+    set_left_margin_offset: function(x){
+        x*=1 // convert to number... should be int
+        this.left_margin_offset = x + this.HORIZONTAL_MARGIN;
 
         this.w = this.size[0] + x;
         this.h = this.size[1];
 
-        var canvas_width = this.w - this.SEQUENCE_BASE - this.left_margin_offset;
+        var canvas_width = this.w - this.HORIZONTAL_MARGIN - this.left_margin_offset;
         this.seq_to_canvas = canvas_width / this.resolution;
-    }
+    },
 
-    this.set_left_margin_offset(0);
-
-    this.draw_sequence_line=function(){
+    draw_sequence_line: function(){
         //Draw the black line at the top representing the sequence with ticks
         //indicating resolution.
 
         var start_x = this.left_margin_offset;
-        var start_y = this.SEQUENCE_OFFSET + this.SEQUENCE_TICK_HEIGHT / 2
+        var start_y = this.VERTICAL_MARGIN + this.SEQUENCE_TICK_HEIGHT / 2
                   - this.SEQUENCE_HEIGHT / 2;
 
-        var w = this.w - this.SEQUENCE_BASE - this.left_margin_offset;
+        var w = this.w - this.HORIZONTAL_MARGIN - this.left_margin_offset;
         var h = this.SEQUENCE_HEIGHT;
 
-        // using 'w' here instead of 'this.w' creates a right offset
-        // this is also done in annotation position calculation, so we leave it for now.
+        // draw the horizontal line
         this.rectangles.push({"rect":[start_x, start_y, w, h],
                             "fill":colors.black});
 
-        // so we add the offset again for the right side
-        // w -= this.left_margin_offset;
-        
         this._calc_tick_spacing();
-        var sequence_range = this.sequence_stop - this.sequence_start;
-        
+
         // put the first tick at the first valid location from the start of the sequence
         start_x = this.TICKSPACING - (this.sequence_start % this.TICKSPACING);
-                  // - this.left_margin_offset;
-        
+
         // draw n=0 tick instead of n=1 tick when at multiples of tickspacing
-        if (start_x == this.TICKSPACING) start_x = 0;  
+        if (start_x == this.TICKSPACING) start_x = 0;
 
         var tick_text = (this.sequence_start + start_x);
-        // convert from bases to pixels 
-        // the math returns a float that is not exactly an int
-        // parseInt returns the floor of the number, so we use ceiling.
-        var tickspacing = Math.ceil(w * this.TICKSPACING / sequence_range);
-        start_x = Math.ceil(w * start_x / sequence_range) + this.left_margin_offset;
-        start_y = this.SEQUENCE_OFFSET;
-        
-        
+
+        // convert tickspacing from bases to pixels
+        var tickspacing = Math.ceil(w * this.TICKSPACING / this.sequence_length)
+        start_x = Math.ceil(w * start_x / this.sequence_length) + this.left_margin_offset;
+        start_y = this.VERTICAL_MARGIN;
 
         while (start_x < this.w - this.left_margin_offset + this.SEQUENCE_TICK_WIDTH){
             this.rectangles.push({"rect":[start_x - (this.SEQUENCE_TICK_WIDTH/2), start_y,
                                     this.SEQUENCE_TICK_WIDTH,
                                     this.SEQUENCE_TICK_HEIGHT],
                                     "fill":colors.black});
-            
+
             var tick_text_size = this._calc_textsize(tick_text.toString())[0]
             this.texts.push({"text":[tick_text.toString(), start_x - (tick_text_size/2),
                             start_y - this.SEQUENCE_TICK_HEIGHT],
@@ -153,16 +171,17 @@ function JSONSequencePicture( sequence_length, sequence_start, sequence_stop, si
             tick_text+=this.TICKSPACING;
             start_x += tickspacing;
         }
-    }
+    },
 
-    this._draw_feature = function(slot, start, stop, color, name){
+
+    _draw_feature: function(slot, start, stop, color, name){
         //Draw an annotation, or part of an annotation, as a thick line.
 
         if (color == null){
             color = this.colors.red;
         }
 
-        var start_y = this.SEQUENCE_OFFSET + (slot+1)*this.FEATURE_SPACING;
+        var start_y = this.VERTICAL_MARGIN + (slot+1)*this.FEATURE_SPACING;
 
 
         var start_x = Math.floor(start*this.seq_to_canvas + 0.5) + this.left_margin_offset;
@@ -175,78 +194,72 @@ function JSONSequencePicture( sequence_length, sequence_start, sequence_stop, si
 
 
 
-    }
+    },
 
-    this._draw_feature_name=function(name, start_x, slot){
+    _draw_feature_name: function(name, start_x, slot){
         //Draw the name of the annotation next to it.
 
         start_x = Math.floor( (start_x) * this.seq_to_canvas + 0.5);
         start_x += this.left_margin_offset;
 
-        var start_y = this.SEQUENCE_TEXT_OFFSET + (slot + 1.75)*this.FEATURE_SPACING;
+        var start_y = this.VERTICAL_MARGIN_TEXT + (slot + 1.75)*this.FEATURE_SPACING;
 
         // use js to calculate text width and x poisitioning
         var xsize = this._calc_textsize(name)[0];
         this.texts.push({"text":[name, start_x - xsize, start_y],
                             "fill":colors.black} );
-    }
+    },
 
-    this._calc_textsize=function(text){
+    _calc_textsize: function(text){
         //Calculate the width of the text label for an annotation.
 
         var text_size = text.length*7;
         return [text_size];
-    }
+    },
 
 
-    this._draw_thin_feature=function(slot, start, stop, color){
+    _draw_thin_feature: function(slot, start, stop, color){
         //Draw an annotation as a thin line.
 
         if (color == null){
             color = this.colors.red;
         }
-        var start_y = this.SEQUENCE_OFFSET + (slot+1)*this.FEATURE_SPACING +
+        var start_y = this.VERTICAL_MARGIN + (slot+1)*this.FEATURE_SPACING +
                   this.THIN_FEATURE_OFFSET;
 
         var start_x = Math.floor(start*this.seq_to_canvas+0.5) + this.left_margin_offset;
         var width = Math.floor( (stop - start) * this.seq_to_canvas + 0.5);
         width = Math.max(width, 1);
 
-//        if width + start_x > this.w - this.SEQUENCE_OFFSET:
-//            width = this.w - this.SEQUENCE_OFFSET - start_x
+    //        if width + start_x > this.w - this.VERTICAL_MARGIN:
+    //            width = this.w - this.VERTICAL_MARGIN - start_x
 
         this.rectangles.push({"rect":[start_x, start_y, width,
                                 this.THIN_FEATURE_HEIGHT],
                                 "fill":color, "outline":color});
         this.max_y = Math.max(start_y + this.THIN_FEATURE_HEIGHT, this.max_y);
-    }
+    },
 
 
-    this.set_left_margin_offset=function(x){
-        this.left_margin_offset = x;
-    }
+    /**
+     * Calculate the width (in bases, not px) for each tick     * 
+     */
+    _calc_tick_spacing: function(){
+        // this is to increase the number of ticks
+        var sequence_range = this.sequence_length / 2;
 
-
-    this._calc_tick_spacing=function(){
-        // Calculate the width (in bases, not px) for each tick
-        // TICKSPACING will always be a power of 10
-        var sequence_range = this.sequence_stop - this.sequence_start
-        
-        // we want 1-10 ticks in half of the range
-        // increase this number for more ticks
-        sequence_range /= 2;
-        
         var tickunit = Math.floor(Math.log(sequence_range)/Math.LN10);
         this.TICKSPACING = Math.pow(10,tickunit);
-        
+
+        // double the number of ticks if there are less than 5
         if (sequence_range / this.TICKSPACING < 5) this.TICKSPACING /= 2;
-    }
+    },
 
 
 
 
 //    this.draw_annotations=function(nlmsa, start_slot=0){
-    this.draw_annotations=function(annotations){
+    draw_annotations: function(annotations){
         for each (var annotation in annotations){
 
 
@@ -262,13 +275,13 @@ function JSONSequencePicture( sequence_length, sequence_start, sequence_stop, si
 
             var slot = annotation[1];
 
-//            feat_start = annotation.feature_start
+    //            feat_start = annotation.feature_start
             var start = annotation[2];
 
-//            stop = annotation.sequence.stop
+    //            stop = annotation.sequence.stop
             var stop = annotation[3];
 
-//            color = annotation.color
+    //            color = annotation.color
             var color = annotation[4];
 
             this._draw_feature_name(name, start, slot);
@@ -284,9 +297,10 @@ function JSONSequencePicture( sequence_length, sequence_start, sequence_stop, si
 
         return {"rectangles":this.rectangles,"texts":this.texts};
     }
-
-
 }
+
+
+
 
 
 
@@ -301,7 +315,7 @@ function Draw(){
 
     console.log("starting draw!");
 
-    var j = new JSONSequencePicture(annots.length, start, stop);
+    var j = new SequencePicture(stop-start, start);
     j.draw_sequence_line();
     var rectangles= j.draw_annotations(annots);
 
@@ -408,7 +422,7 @@ function showInterval(relation){
             start = data.start;
             stop = data.stop;
             // later this data should be appended to annots
-            annots = eval(data.data);
+            annots = JSON.parse(data.data);
 
 
             $('input[name="sequence"]').val(sequence);
