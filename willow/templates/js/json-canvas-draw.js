@@ -117,29 +117,40 @@ function JSONSequencePicture( sequence_length, sequence_start, sequence_stop, si
                             "fill":colors.black});
 
         // so we add the offset again for the right side
-        w -= this.left_margin_offset;
+        // w -= this.left_margin_offset;
         
         this._calc_tick_spacing();
         var sequence_range = this.sequence_stop - this.sequence_start;
         
         // put the first tick at the first valid location from the start of the sequence
         start_x = this.TICKSPACING - (this.sequence_start % this.TICKSPACING);
+                  // - this.left_margin_offset;
         
         // draw n=0 tick instead of n=1 tick when at multiples of tickspacing
         if (start_x == this.TICKSPACING) start_x = 0;  
 
+        var tick_text = (this.sequence_start + start_x);
         // convert from bases to pixels 
-        var tickspacing = w * this.TICKSPACING / sequence_range
-        start_x = w * start_x / sequence_range;
-
-        start_x += this.left_margin_offset;
+        // the math returns a float that is not exactly an int
+        // parseInt returns the floor of the number, so we use ceiling.
+        var tickspacing = Math.ceil(w * this.TICKSPACING / sequence_range);
+        start_x = Math.ceil(w * start_x / sequence_range) + this.left_margin_offset;
         start_y = this.SEQUENCE_OFFSET;
+        
+        
 
-        while (start_x < this.w - this.left_margin_offset){
-            this.rectangles.push({"rect":[start_x, start_y,
+        while (start_x < this.w - this.left_margin_offset + this.SEQUENCE_TICK_WIDTH){
+            this.rectangles.push({"rect":[start_x - (this.SEQUENCE_TICK_WIDTH/2), start_y,
                                     this.SEQUENCE_TICK_WIDTH,
                                     this.SEQUENCE_TICK_HEIGHT],
                                     "fill":colors.black});
+            
+            var tick_text_size = this._calc_textsize(tick_text.toString())[0]
+            this.texts.push({"text":[tick_text.toString(), start_x - (tick_text_size/2),
+                            start_y - this.SEQUENCE_TICK_HEIGHT],
+                            "fill":colors.black} );
+
+            tick_text+=this.TICKSPACING;
             start_x += tickspacing;
         }
     }
@@ -227,6 +238,8 @@ function JSONSequencePicture( sequence_length, sequence_start, sequence_stop, si
         
         var tickunit = Math.floor(Math.log(sequence_range)/Math.LN10);
         this.TICKSPACING = Math.pow(10,tickunit);
+        
+        if (sequence_range / this.TICKSPACING < 5) this.TICKSPACING /= 2;
     }
 
 
